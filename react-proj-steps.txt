@@ -1,0 +1,51 @@
+Requirements:
+1. nodejs
+2. git
+3. postman
+4. react devtools chrome ext
+5. redux devtools chrome ext
+
+Init Setup:
+1. vscode
+-- es7 react, redux, react-native extension
+-- settings.json emmit include languages
+    "javascript": "javascriptreact"
+
+2. mongo atlas
+-- create project
+-- create cluster free tier
+-- add user to access db
+-- whitelist ip address
+
+3. vscode
+-- create .gitignore
+    node_modules/
+
+-- git init
+-- npm init
+    starting point: server.js
+    license       : MIT
+
+-- install regular dependencies 
+    npm i express express-validator bcryptjs config gravatar jsonwebtoken mongoose request
+
+-- install dev dependencies
+    npm i -D nodemon concurrently
+
+--package.json replace "test" with "start"
+    "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+
+  rewrite as:-
+
+  "scripts": {
+    "start": "node server",
+    "server": "nodemon server"
+  },
+
+Steps:
+1 -server.js --CREATING EXPRESS SERVER AND INITIALIZING APP
+                TERMINAL: npm run server
+                POSTMAN: GET: http://localhost:5000
+                                You should be able to see the response "API Running"

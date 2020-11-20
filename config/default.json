@@ -1,0 +1,3 @@
+{
+    "mongoURI": "mongodb+srv://sonia:sonia@devconnector.voiv1.mongodb.net/<dbname>?retryWrites=true&w=majority"
+}

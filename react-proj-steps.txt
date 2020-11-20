@@ -45,7 +45,48 @@ Init Setup:
   },
 
 Steps:
-1 -server.js --CREATING EXPRESS SERVER AND INITIALIZING APP
+---------------------------------------------------------------------------------
+                                PART ONE
+---------------------------------------------------------------------------------
+
+1-- CREATING EXPRESS SERVER AND INITIALIZING APP
                 TERMINAL: npm run server
                 POSTMAN: GET: http://localhost:5000
                                 You should be able to see the response "API Running"
+
+2-- CONNECTING TO MONGO DB
+                TERMINAL: npm run server
+                    You should be able to see "Database connected"
+
+3-- CREATING ROUTES
+4-- UPDATE server.js
+        GOTO POSTMAN and check if the routes are working
+
+5-- CREATE COLLECTIONS IN POSTMAN
+
+6-- MODELS *Naming convention- Start with uppercase
+7-- UPDATE users.js
+8-- UPDATE server.js
+
+    GOTO POSTMAN AND POST REQUEST
+    -   HEADERS
+            KEY             VALUE
+            Content-Type    application/json
+
+    -   BODY -> raw
+        {
+            "name":"sonia"
+        }
+
+9-- UPDATE users.js FOR VALIDATION
+        POST in POSTMAN to see 400 bad req
+        POST correct details in req and see 200 OK
+        -Save as -> Register User in collection 'Users & Auth'
+
+10-- UPDATE users.js
+        POSTMAN Register User -> SEND
+        GOTO COLLECTIONS in MONGO DB and check if the user 'sonia' is saved.
+
+---------------------------------------------------------------------------------
+                                PART TWO
+---------------------------------------------------------------------------------

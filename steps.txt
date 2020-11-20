@@ -1,5 +1,9 @@
+---------------------------------------------------------------------------------
+                                PART ONE
+---------------------------------------------------------------------------------
 --1
 --CREATING EXPRESS SERVER AND INITIALIZING APP
+    Create /server.js
 
     const express = require('express');
     const app = express();
@@ -10,4 +14,198 @@
 
     app.listen(PORT, ()=>(console.log(`Server started on port ${PORT}`)));
 
---
+--2
+--CONNECTING TO MONGO 
+    Create /config/default.json
+        {
+            "mongoURI": "mongodb+srv://sonia:sonia@devconnector.voiv1.mongodb.net/<dbname>?retryWrites=true&w=majority"
+        }
+    
+    Create /config/db.js
+        const mongoose = require('mongoose');
+        const config = require('config')
+        const db = config.get('mongoURI');
+
+        const connectDB = async() => {
+            try{
+                await mongoose.connect(db,{useNewUrlParser: true, useUnifiedTopology: true});
+                console.log("Database connected")
+            }catch(err)
+            {
+                console.log(err);
+                process.exit(1);
+            }
+        };
+
+        module.exports = connectDB;
+
+    Add the following code snippet to server.js
+
+        const connectDB = require('./config/db');
+        connectDB();
+
+--3
+--CONNECTING ROUTES
+ Create routes/api/users.js
+ routes/api/auth.js
+ routes/api/profile.js
+ routes/api/posts.js
+
+    const express = require('express');
+    const router = express.Router();
+
+    router.get('/',(req,res)=>res.send('<filename> Route'));
+
+    module.exports = router;
+
+--4
+UPDATE server.js
+
+    const express = require('express');
+    const connectDB = require('./config/db');
+    const app = express();
+
+    connectDB();
+
+    app.get('/',(req,res)=>res.send('API Running'));
+
+    app.use('/api/users', require('./routes/api/users'));
+    app.use('/api/auth', require('./routes/api/auth'));
+    app.use('/api/posts', require('./routes/api/posts'));
+    app.use('/api/profile', require('./routes/api/profile'));
+
+    const PORT = process.env.PORT || 5000;
+
+    app.listen(PORT, ()=>(console.log(`Server started on port ${PORT}`)));
+
+--5 CREATE COLLECTIONS IN POSTMAN
+Create 3 folders: Users & Auth, Profile, Posts
+
+--6 CREATE MODELS
+Create models/User.js
+
+    const mongoose = require('mongoose');
+    const UserSchema = new mongoose.Schema({
+        name:{
+            type: String,
+            required: true
+        },
+        email:{
+            type:String,
+            required: true,
+            unique: true
+        },
+        password:{
+            type: String,
+            required: true
+        },
+        avatar:{
+            type: String
+        },
+        date:{
+            type: Date,
+            default: Date.now
+        }
+    });
+ 
+    module.exports = User = mongoose.model('user',UserSchema);
+
+--7 UPDATE users.js
+    const express = require('express');
+    const router = express.Router();
+
+    router.post('/',(req,res)=>{
+        console.log(req.body);
+        res.send('User Route');
+    });
+
+    module.exports = router;
+
+--8 UPDATE server.js
+
+    app.use(express.json({extended:false}));
+
+--9 FORM VALIDATION users.js
+    const express = require('express');
+    const router = express.Router();
+    const {check, validationResult} = require('express-validator');
+
+    router.post('/',
+    [
+        check('name','Name is required').not().isEmpty(),
+        check('email','Enter vaild email').isEmail(),
+        check('password','Min password length is 6').isLength({min: 6})
+    ],
+    (req,res)=>{
+        const errors = validationResult(req);
+        if(!errors.isEmpty())
+        {
+            return res.status(400).json({errors: errors.array()})
+        }
+        res.send('User Route');
+    });
+
+    module.exports = router;
+
+--10 UPDATE users.js
+
+    const express = require('express');
+    const router = express.Router();
+    const {check, validationResult} = require('express-validator');
+    const User = require('../../models/User');
+    const gravatar = require('gravatar');
+    const bcrypt = require('bcryptjs');
+
+    router.post('/',
+    [
+        check('name','Name is required').not().isEmpty(),
+        check('email','Enter vaild email').isEmail(),
+        check('password','Min password length is 6').isLength({min: 6})
+    ],
+    async (req,res)=>{
+        const errors = validationResult(req);
+        if(!errors.isEmpty())
+        {
+            return res.status(400).json({errors: errors.array()})
+        }
+
+        const {name, email, password} = req.body;
+
+        try{
+            let user = await User.findOne({email});
+            if(user){
+                return res.status(400).json({errors:[{msg: 'User already exits!'}]});
+            }
+
+            const avatar = gravatar.url(email,{
+                s:"200",
+                r:"pg",
+                d:"mm"
+            });
+        
+            user = new User({
+                name,
+                email,
+                avatar,
+                password
+            });
+        
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+
+            await user.save();
+
+            //return jsonwebtoken (due)
+            res.send('User Registered');
+        }catch(err){
+            console.log(err.message);
+            res.status(500).send('Server error');
+        }
+        
+    });
+
+    module.exports = router;
+
+---------------------------------------------------------------------------------
+                                PART TWO
+---------------------------------------------------------------------------------

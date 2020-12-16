@@ -230,4 +230,14 @@ goto client/src (delete)
 
 3-- Edit App.js
 
-4--
+4(a)--Create client/src/components/auth/Login.js
+4(b)  Create client/src/components/auth/Register.js
+4(c)  Edit Navbar.js, Landing.js
+
+            npm run dev
+
+5--Edit Register.js (Example for req / res but we won't be doing it this way)
+    npm run dev
+    register new user 
+    check if user is added to mongodb
+

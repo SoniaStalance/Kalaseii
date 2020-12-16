@@ -1279,3 +1279,63 @@ Create models/Post.js
 ---------------------------------------------------------------------------------
                                 PART THREE - FRONTEND
 ---------------------------------------------------------------------------------
+3-- Edit App.js
+
+    import React, { Fragment } from 'react';
+    import Navbar from './components/layout/Navbar';
+    import Landing from './components/layout/Landing';
+    import './App.css';
+
+    const App = () => 
+    <Fragment>
+        <Navbar />
+        <Landing />
+    </Fragment>
+    export default App;
+
+2(a) -- Navbar.js
+    import React from 'react'
+
+    export const Navbar = () => {
+        return (
+            <nav className="navbar bg-dark">
+            <h1>
+                <a href="index.html"><i className="fas fa-code"></i> DevConnector</a>
+            </h1>
+            <ul>
+                <li><a href="profiles.html">Developers</a></li>
+                <li><a href="register.html">Register</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+            </nav>
+        )
+    }
+    export default Navbar;
+
+2(b) -- Landing.js
+    /*
+    ES7 React/Redux snippets
+    racfe (enter)
+    */
+    import React from 'react'
+
+    export const Landing = () => {
+        return (
+            <section className="landing">
+            <div className="dark-overlay">
+                <div className="landing-inner">
+                <h1 className="x-large">Developer Connector</h1>
+                <p className="lead">
+                    Create a developer profile/portfolio, share posts and get help from
+                    other developers
+                </p>
+                <div className="buttons">
+                    <a href="register.html" className="btn btn-primary">Sign Up</a>
+                    <a href="login.html" className="btn btn-light">Login</a>
+                </div>
+                </div>
+            </div>
+            </section>
+        )
+    }
+    export default Landing;

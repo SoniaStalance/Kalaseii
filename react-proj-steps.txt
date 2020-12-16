@@ -216,3 +216,18 @@ goto client/src (delete)
 -index.css
 -App.test.js
 -logo.svg
+
+1-- Clear App.css goto theme css/styles.css copy n paste in App.css
+    in App.css search for landing and in src replace .. with . (search in same dir)
+
+    Create a folder img and put showcase.jpg
+
+-- Search for fontawesome and copy paste that link in public/index.html
+2-- Create client/src/components/layout/Navbar.js
+                                layout/Landing.js
+
+    npm run dev
+
+3-- Edit App.js
+
+4--

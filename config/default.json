@@ -1,3 +1,6 @@
 {
-    "mongoURI": "mongodb+srv://sonia:sonia@devconnector.voiv1.mongodb.net/<dbname>?retryWrites=true&w=majority"
+    "mongoURI": "mongodb+srv://sonia:sonia@devconnector.voiv1.mongodb.net/<dbname>?retryWrites=true&w=majority",
+    "jwtSecret": "mysecrettoken",
+    "githubClientId": "88f2fb9222321b92a0c5",
+    "githubSecret": "284329d5328abe8498b80bb838d8331c426b0b60"
 }

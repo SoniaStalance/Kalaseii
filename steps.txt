@@ -209,3 +209,1073 @@ Create models/User.js
 ---------------------------------------------------------------------------------
                                 PART TWO
 ---------------------------------------------------------------------------------
+1-- UPDATE default.json
+    {
+        "mongoURI": "mongodb+srv://sonia:sonia@devconnector.voiv1.mongodb.net/<dbname>?retryWrites=true&w=majority",
+        "jwtSecret": "mysecrettoken"
+    }
+
+2-- UPDATE user.js
+
+    const express = require('express');
+    const router = express.Router();
+    const {check, validationResult} = require('express-validator');
+    const User = require('../../models/User');
+    const gravatar = require('gravatar');
+    const bcrypt = require('bcryptjs');
+    const jwt = require('jsonwebtoken');
+    const config = require('config');
+
+    router.post('/',
+    [
+        check('name','Name is required').not().isEmpty(),
+        check('email','Enter vaild email').isEmail(),
+        check('password','Min password length is 6').isLength({min: 6})
+    ],
+    async (req,res)=>{
+        const errors = validationResult(req);
+        if(!errors.isEmpty())
+        {
+            return res.status(400).json({errors: errors.array()})
+        }
+
+        const {name, email, password} = req.body;
+
+        try{
+            let user = await User.findOne({email});
+            if(user){
+                return res.status(400).json({errors:[{msg: 'User already exits!'}]});
+            }
+
+            const avatar = gravatar.url(email,{
+                s:"200",
+                r:"pg",
+                d:"mm"
+            });
+        
+            user = new User({
+                name,
+                email,
+                avatar,
+                password
+            });
+        
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+
+            await user.save();
+
+            //return jsonwebtoken
+            const payload = {
+                user:{
+                    id: user.id
+                }
+            }
+
+            jwt.sign(payload, config.get('jwtSecret'), {expiresIn: 360000},
+            (err, token) => {
+                if(err) throw err;
+                res.json({token})
+            });
+
+        }catch(err){
+            console.log(err.message);
+            res.status(500).send('Server error');
+        }
+        
+    });
+
+    module.exports = router;
+
+3--
+CREATE FOLDER middleware
+middleware/auth.js
+
+    const jwt = require('jsonwebtoken');
+    const config = require('config');
+
+    module.exports = function(req,res,next){
+        //get token from header
+        const token = req.header('x-auth-token');
+
+        //if no token auth declined
+        if(!token){
+            return res.status(401).json({msg: 'No token, authorization denied'});
+        }
+
+        //verify token
+        try{
+            const decoded = jwt.verify(token, config.get('jwtSecret'));
+            req.user = decoded.user;
+            next();
+        }catch(err){
+            res.status(401).json({msg: 'Invalid Token!'});
+        }
+    };
+
+4--
+UPDATE routes/api/auth.js
+    const express = require('express');
+    const router = express.Router();
+    const auth = require('../../middleware/auth');
+    const User = require('../../models/User');
+
+    router.get('/', auth, async (req,res)=>{
+        try{
+            const user = await User.findById(req.user.id).select('-password');
+            res.json(user);
+        }catch(err){
+            console.log(err.msg);
+            res.status(500).send('Server error!');
+        }
+    });
+
+    module.exports = router;
+
+5--
+UPDATE routes/api/auth.js
+    const express = require('express');
+    const router = express.Router();
+    const auth = require('../../middleware/auth');
+    const User = require('../../models/User');
+    const jwt = require('jsonwebtoken');
+    const config = require('config');
+    const {check, validationResult} = require('express-validator');
+    const bcrypt = require('bcryptjs');
+
+
+    /*
+    --GET api/auth
+    --test route
+    --public
+    */
+
+    router.get('/', auth, async (req,res)=>{
+        try{
+            const user = await User.findById(req.user.id).select('-password');
+            res.json(user);
+        }catch(err){
+            console.log(err.msg);
+            res.status(500).send('Server error!');
+        }
+    });
+
+    /*
+    --POST api/auth
+    --authenticate usere and get data
+    --public
+    */
+
+    router.post('/',
+    [
+        check('email','Enter vaild email').isEmail(),
+        check('password','Password is required').exists()
+    ],
+    async (req,res)=>{
+        const errors = validationResult(req);
+        if(!errors.isEmpty())
+        {
+            return res.status(400).json({errors: errors.array()})
+        }
+
+        const {email, password} = req.body;
+
+        try{
+            let user = await User.findOne({email});
+            if(!user){
+                return res.status(400).json({errors:[{msg: 'Invalid credentials!'}]});
+            }
+
+            const isMatch = await bcrypt.compare(password, user.password);
+
+            if(!isMatch){
+                return res.status(400).json({errors: [{msg: 'Invalid Credentials!'}]});
+            }
+        
+            //return jsonwebtoken
+            const payload = {
+                user:{
+                    id: user.id
+                }
+            }
+
+            jwt.sign(payload, config.get('jwtSecret'), {expiresIn: 360000},
+            (err, token) => {
+                if(err) throw err;
+                res.json({token})
+            });
+
+        }catch(err){
+            console.log(err.message);
+            res.status(500).send('Server error');
+        }
+        
+    });
+
+    module.exports = router;
+
+--6
+    const mongoose = require('mongoose');
+
+    const ProfileSchema = new mongoose.Schema({
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'user'
+        },
+        company: {
+            type: String
+        },
+        website: {
+            type: String
+        },
+        location: {
+            type: String
+        },
+        status: {
+            type: String,
+            required: true
+        },
+        skills: {
+            type: [String],
+            required: true
+        },
+        bio:
+        {
+            type: String
+        },
+        githubusername:{
+            type: String
+        },
+        experience: [
+            {
+                title: {
+                    type: String,
+                    required: true
+                },
+                company: {
+                    type: String,
+                    required: true
+                },
+                location: {
+                    type: String
+                },
+                from: {
+                    type: Date,
+                    required: true
+                },
+                to: {
+                    type: Date
+                },
+                current: {
+                    type: Boolean,
+                    default: false
+                },
+                description: {
+                    type: String
+                }
+            }
+        ],
+        education: [
+            {
+                school: {
+                    type: String,
+                    required: true
+                },
+                degree: {
+                    type: String,
+                    required: true
+                },
+                fieldofstudy: {
+                    type: String,
+                    required: true
+                },
+                from: {
+                    type: Date,
+                    required: true
+                },
+                to: {
+                    type: Date
+                },
+                current: {
+                    type: Boolean,
+                    default: false
+                },
+                description: {
+                    type: String
+                }
+            }
+        ],
+        social: {
+            youtube: {
+                type: String
+            },
+            facebook: {
+                type: String
+            },
+            linkedin: {
+                type: String
+            },
+            twitter: {
+                type: String
+            },
+            instagram: {
+                type: String
+            }
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        }
+    });
+
+    module.exports = Profile = mongoose.model('profile', ProfileSechema);
+
+--7 routes/api/profile.js
+    const express = require('express');
+    const router = express.Router();
+    const auth = require('../../middleware/auth');
+    const Profile = require('../../models/Profile');
+    const User = require('../../models/User');
+    const {check, validationResult} = require('express-validator');
+
+
+    /*
+    GET api/profile/me
+    get current user's profile 
+    private
+    */
+    router.get('/me', auth, async (req,res)=>{
+        try{
+            
+            const profile = await Profile.findOne({user: req.user.id}).populate('user', ['name', 'avatar']);
+            
+            if(!profile){
+                
+                return res.status(400).json({msg: 'There is no profile for this user'});
+            }
+            
+            res.json(profile);
+        }catch(err){
+            
+            console.log(err.msg);
+            res.status(500).send('Server error!');
+        }
+    });
+
+    /*
+    POST api/profile
+    create or update a user profile 
+    private
+    */
+    router.post('/', [auth, [
+        check('status','status is required').not().isEmpty(),
+        check('skills','skills is required').not().isEmpty()
+    ]], async (req,res)=>{
+        const errors = validationResult(req);
+        if(!errors.isEmpty()){
+            return res.status(400).json({errors: errors.array()});
+        }
+        
+        const {
+            company,
+            website,
+            location,
+            bio,
+            status,
+            githubusername,
+            skills,
+            facebook,
+            youtube,
+            twitter,
+            instagram,
+            linkedin
+        } = req.body;
+
+        //build profile object
+        const profileFields = {};
+        profileFields.user = req.user.id;
+        if (company) profileFields.company = company;
+        if (website) profileFields.website = website;
+        if (location) profileFields.location = location;
+        if (bio) profileFields.bio = bio;
+        if (status) profileFields.status = status;
+        if (githubusername) profileFields.githubusername = githubusername;
+
+        if(skills){
+            profileFields.skills = skills.split(',').map(skill => skill.trim());
+        }
+        //build social object
+        profileFields.social = {};
+        if (youtube) profileFields.social.youtube = youtube;
+        if (facebook) profileFields.social.facebook = facebook;
+        if (twitter) profileFields.social.twitter = twitter;
+        if (instagram) profileFields.social.instagram = instagram;
+        if (linkedin) profileFields.social.linkedin = linkedin;
+
+        try{
+            let profile = await Profile.findOne({user: req.user.id});
+            if(profile){
+                //update
+                profile = await Profile.findOneAndUpdate({user: req.user.id}, {$set: profileFields}, {new: true});
+                return res.json(profile);
+            }
+
+            //else create a new profile
+            profile = new Profile(profileFields);
+            await profile.save();
+            res.json(profile);
+
+        }catch(err){
+            console.log(err.msg);
+            res.status(500).send('Server error');
+        }
+    })
+
+    module.exports = router;
+
+--8 TO GET ALL PROFILES & GET PROFILE BY USER_ID
+UPDATE routes/api/profile.js
+    const express = require('express');
+    const router = express.Router();
+    const auth = require('../../middleware/auth');
+    const Profile = require('../../models/Profile');
+    const User = require('../../models/User');
+    const {check, validationResult} = require('express-validator');
+
+
+    /*
+    GET api/profile/me
+    get current user's profile 
+    private
+    */
+    router.get('/me', auth, async (req,res)=>{
+        try{
+            
+            const profile = await Profile.findOne({user: req.user.id}).populate('user', ['name', 'avatar']);
+            
+            if(!profile){
+                
+                return res.status(400).json({msg: 'There is no profile for this user'});
+            }
+            
+            res.json(profile);
+        }catch(err){
+            
+            console.log(err.msg);
+            res.status(500).send('Server error!');
+        }
+    });
+
+    /*
+    POST api/profile
+    create or update a user profile 
+    private
+    */
+    router.post('/', [auth, [
+        check('status','status is required').not().isEmpty(),
+        check('skills','skills is required').not().isEmpty()
+    ]], async (req,res)=>{
+        const errors = validationResult(req);
+        if(!errors.isEmpty()){
+            return res.status(400).json({errors: errors.array()});
+        }
+        
+        const {
+            company,
+            website,
+            location,
+            bio,
+            status,
+            githubusername,
+            skills,
+            facebook,
+            youtube,
+            twitter,
+            instagram,
+            linkedin
+        } = req.body;
+
+        //build profile object
+        const profileFields = {};
+        profileFields.user = req.user.id;
+        if (company) profileFields.company = company;
+        if (website) profileFields.website = website;
+        if (location) profileFields.location = location;
+        if (bio) profileFields.bio = bio;
+        if (status) profileFields.status = status;
+        if (githubusername) profileFields.githubusername = githubusername;
+
+        if(skills){
+            profileFields.skills = skills.split(',').map(skill => skill.trim());
+        }
+        //build social object
+        profileFields.social = {};
+        if (youtube) profileFields.social.youtube = youtube;
+        if (facebook) profileFields.social.facebook = facebook;
+        if (twitter) profileFields.social.twitter = twitter;
+        if (instagram) profileFields.social.instagram = instagram;
+        if (linkedin) profileFields.social.linkedin = linkedin;
+
+        try{
+            let profile = await Profile.findOne({user: req.user.id});
+            if(profile){
+                //update
+                profile = await Profile.findOneAndUpdate({user: req.user.id}, {$set: profileFields}, {new: true});
+                return res.json(profile);
+            }
+
+            //else create a new profile
+            profile = new Profile(profileFields);
+            await profile.save();
+            res.json(profile);
+
+        }catch(err){
+            console.log(err.msg);
+            res.status(500).send('Server error');
+        }
+    });
+
+    /*
+    GET api/profile
+    get all profiles 
+    public
+    */
+
+    router.get('/', async(req, res)=>{
+        try{
+            const profiles = await Profile.find().populate('user', ['name', 'avatar']);
+            res.json(profiles);
+        }catch(err){
+            console.log(err.msg);
+            res.status(500).send('Server Error');
+        }
+    });
+
+    /*
+    GET api/profile/user/:user_id
+    get profile by user_id
+    public
+    */
+
+    router.get('/user/:user_id', async(req, res)=>{
+        try{
+            const profile = await Profile.findOne({ user: req.params.user_id}).populate('user', ['name', 'avatar']);
+            if(!profile){
+                return res.status(400).json({msg: 'Profile not found'})
+            }
+            res.json(profile);
+        }catch(err){
+            if(err.kind == 'ObjectId'){
+                return res.status(400).json({msg: 'PROFILE NOT FOUND'})
+            }
+            else{
+            console.log(err.msg);
+            res.status(500).send('Server Error');
+            }
+        }
+    });
+
+    module.exports = router;
+
+9-- DELETE USER, PROFILE, POSTS
+APPEND this code snippet to routes/api/profile.js
+    /*
+    DELETE api/profile
+    DELETE profile, user, posts
+    private
+    */
+
+    router.delete('/', auth, async(req, res)=>{
+        try{
+            //todo - remove user's posts
+            //Remove Profile
+            await Profile.findOneAndRemove({user: req.user.id});
+            //Remove u=User
+            await User.findOneAndRemove({_id: req.user.id});
+            res.json({msg: 'User Removed'})
+        }catch(err){
+            console.log(err.msg);
+            res.status(500).send('Server Error');
+        }
+    });
+
+10-- ADD EXPERIENCE TO PROFILE
+APPEND this code snippet to routes/api/profile.js
+
+    /*
+    PUT api/profile/experience
+    add profile experience
+    private
+    */
+    router.put('/experience', [ auth, [
+        check('title','Title is required').not().isEmpty(),
+        check('company','Company is required').not().isEmpty(),
+        check('from','From date is required').not().isEmpty()
+    ] ], 
+    async (req, res)=> {
+        const errors = validationResult(req);
+        if(!errors.isEmpty()){
+            return res.status(400).json({errors: errors.array()});
+        }
+
+        const{
+            title,
+            company,
+            location,
+            from,
+            to,
+            current,
+            description
+        } = req.body;
+
+        const newExp = {
+            title,
+            company,
+            location,
+            from,
+            to,
+            current,
+            description
+        }
+
+        try{
+            const profile = await Profile.findOne({user: req.user.id});
+            //push will push at the end of the array
+            //unshift will push to the beginning of the array
+
+            profile.experience.unshift(newExp);
+            await profile.save();
+
+            res.json(profile);
+        }catch(err){
+            console.error(err.message);
+            res.status(500).send('Server error');
+        }
+    });
+
+11-- DELETE EXPERIENCE FROM PROFILE
+APPEND this code snippet to routes/api/profile.js
+
+    /*
+    DELETE experience by exp_id
+    private
+    */
+    router.delete('/experience/:exp_id', auth, async (req, res)=>{
+        try {
+            const profile = await Profile.findOne({user: req.user.id});
+
+            //get remove experience
+            const removeIndex = profile.experience.map(item => item.id).indexOf(req.params.exp_id);
+
+            profile.experience.splice(removeIndex, 1);
+            await profile.save();
+
+            res.json(profile);
+
+        } catch (error) {
+            console.error(error.message);
+            return res.status(500).send('Server error');
+        }
+    })
+
+12a-- ADD EDUCATION TO PROFILE
+12b-- DELETE EXPERIENCE FROM PROFILE
+
+    /*
+    PUT api/profile/education
+    add profile education
+    private
+    */
+    router.put('/education', [ auth, [
+        check('school','School is required').not().isEmpty(),
+        check('degree','Degree is required').not().isEmpty(),
+        check('fieldofstudy','Field of study is required').not().isEmpty(),
+        check('from','From is required').not().isEmpty()
+    ] ], 
+    async (req, res)=> {
+        const errors = validationResult(req);
+        if(!errors.isEmpty()){
+            return res.status(400).json({errors: errors.array()});
+        }
+
+        const{
+            school,
+            degree,
+            fieldofstudy,
+            from,
+            to,
+            current,
+            description
+        } = req.body;
+
+        const newEdu = {
+            school,
+            degree,
+            fieldofstudy,
+            from,
+            to,
+            current,
+            description
+        }
+
+        try{
+            const profile = await Profile.findOne({user: req.user.id});
+            //push will push at the end of the array
+            //unshift will push to the beginning of the array
+
+            profile.education.unshift(newEdu);
+            await profile.save();
+
+            res.json(profile);
+        }catch(err){
+            console.error(err.message);
+            res.status(500).send('Server error');
+        }
+    });
+
+    /*
+    DELETE education by edu_id
+    private
+    */
+    router.delete('/education/:edu_id', auth, async (req, res)=>{
+        try {
+            const profile = await Profile.findOne({user: req.user.id});
+
+            //get remove experience
+            const removeIndex = profile.education.map(item => item.id).indexOf(req.params.edu_id);
+
+            profile.education.splice(removeIndex, 1);
+            await profile.save();
+
+            res.json(profile);
+
+        } catch (error) {
+            console.error(error.message);
+            return res.status(500).send('Server error');
+        }
+    })
+
+13-- GITHUB API
+//UPDATE routes/api/profile.js
+
+//INCLUDE
+const request = require('request');
+const config = require('config');
+
+//APPEND
+/*
+GET routes/api/profile/github/:username
+get users github repos
+Public
+*/
+
+router.get('/github/:username', (req, res)=>{
+    try {
+        
+        const options = {
+            uri : `https://api.github.com/users/${req.params.username}/repos?per_page=5&sort=created:asc&client_id=${config.get('githubClientId')}&client_secret=${config.get('githubSecret')}`,
+            method : 'GET',
+            headers: {'user-agent': 'node.js'}
+        }
+
+        request(options, (error, response, body) => {
+            if(error) console.error(error.message);
+    
+            if(response.statusCode !== 200) res.status(404).json({msg: 'No github profile for user'});
+    
+            res.json(JSON.parse(body));
+        })
+        
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server error');
+    }
+})
+
+
+14-- Creating the Post model
+Create models/Post.js
+
+    const mongoose = require('mongoose');
+    const Schema = mongoose.Schema;
+
+    const PostSchema = new mongoose.Schema({
+        user: {
+            type: Schema.Types.ObjectId,
+            ref: 'users'
+        },
+        text:{
+            type: String,
+            required: true
+        },
+        name:{
+            type: String
+        },
+        avatar:{
+            type: String
+        },
+        likes:[
+            {
+                user:{
+                    type: Schema.Types.ObjectId,
+                    ref: 'users'
+                }
+            }
+        ],
+        comments:[
+            {
+                user:{
+                    type: Schema.Types.ObjectId,
+                    ref: 'users'
+                },
+                text:{
+                    type: String,
+                    required: true
+                },
+                name:{
+                    type: String
+                },
+                avatar:{
+                    type: String
+                },
+                date:{
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
+        date:{
+            type: Date,
+            default: Date.now
+        }
+    })
+
+    module.exports = Post = mongoose.model('post', PostSchema);
+
+15-- Modify routes/api/posts.js
+
+        const express = require('express');
+        const router = express.Router();
+        const auth = require('../../middleware/auth');
+        const {check, validationResult} = require('express-validator');
+
+        const Profile = require('../../models/Profile');
+        const User = require('../../models/User');
+        const Post = require('../../models/Post');
+        /*
+        POST api/posts
+        Create a post
+        Private
+        */
+        router.post('/', [auth, [
+            check('text', 'Text is require').not().isEmpty()
+        ]] ,
+        async (req,res)=>{
+            const errors = validationResult(req);
+            if(!errors.isEmpty()){
+                return res.send(400).json({ errors: errors.array() })
+            }
+
+            try {
+                const user = await User.findById(req.user.id).select('-password');
+
+                const postFields = {
+                    text: req.body.text,         
+                    name: user.name,
+                    avatar: user.avatar,
+                    user: req.user.id
+                }
+                if(req.body.img)
+                    postFields.img = req.body.img;
+
+                const newPost = new Post(postFields);
+                const post = await newPost.save();
+
+                res.json(post);
+            } catch (err) {
+                console.error(err.message);
+                res.status(500).send('Server error');
+            }
+        });
+
+
+        /*
+        GET api/posts
+        All posts
+        Private
+        */
+        router.get('/',auth, async(req,res)=>{
+            try {
+                const posts = await Post.find().sort({date:-1});
+                res.json(posts);
+            } catch (err) {
+                console.error(err.message);
+                res.status(500).send('Server error');
+            }
+        })
+
+        /*
+        GET api/posts/<id>
+        post by id
+        Private
+        */
+
+        router.get('/:id',auth, async(req,res)=>{
+            try {
+                const post = await Post.findById(req.params.id);
+                if(!post){
+                    return res.status(404).json({msg: 'Post not found!'});
+                }
+                res.json(post);
+            } catch (err) {
+                console.error(err.message);
+                if(err.kind === 'ObjectId'){
+                    return res.status(404).json({msg: 'Post not found!'});
+                }
+                res.status(500).send('Server error');
+            }
+        })
+
+        /*
+        DELETE api/post/<id>
+        Private
+        */
+        router.delete('/:id',auth, async(req,res)=>{
+            try {
+                const post = await Post.findById(req.params.id);
+                if(!post){
+                    return res.status(404).json({msg: 'Post not found!'});
+                }
+
+                if(post.user.toString() !== req.user.id){
+                    return res.status(401).json({msg: 'User not authorized'});
+                }
+                await post.remove();
+                res.json({msg:'Post removed'});
+            } catch (err) {
+                console.error(err.message);
+                if(err.kind === 'ObjectId'){
+                    return res.status(404).json({msg: 'Post not found!'});
+                }
+                res.status(500).send('Server error');
+            }
+        })
+
+        /*
+        PUT api/posts/like/<id>
+        like post by id
+        Private
+        */
+
+        router.put('/like/:id',auth, async(req,res)=>{
+            try {
+                const post = await Post.findById(req.params.id);
+                //check if user has already liked this post
+                if(post.likes.filter(like=>like.user.toString() === req.user.id).length>0){
+                    return res.status(400).json({msg: 'Already liked'});
+                }
+                post.likes.unshift({user: req.user.id});
+                await post.save();
+                res.json(post.likes);
+            } catch (err) {
+                console.error(err.message);
+                res.status(500).send('Server error');
+            }
+        })
+
+        /*
+        PUT api/posts/unlike/<id>
+        like post by id
+        Private
+        */
+
+        router.put('/unlike/:id',auth, async(req,res)=>{
+            try {
+                const post = await Post.findById(req.params.id);
+                //check if user has already liked this post
+                if(post.likes.filter(like=>like.user.toString() === req.user.id).length===0){
+                    return res.status(400).json({msg: 'Post not liked yet'});
+                }
+
+                const removeIndex = post.likes.map(like => like.user.toString()).indexOf(req.user.id);
+
+                post.likes.splice(removeIndex,1);
+                await post.save();
+                res.json(post.likes);
+            } catch (err) {
+                console.error(err.message);
+                res.status(500).send('Server error');
+            }
+        })
+
+        /*
+        ---Comments---
+        POST api/posts/comment/:id
+        Private
+        */
+        router.post('/comment/:id', [auth, [
+            check('text', 'Text is require').not().isEmpty()
+        ]] ,
+        async (req,res)=>{
+            const errors = validationResult(req);
+            if(!errors.isEmpty()){
+                return res.send(400).json({ errors: errors.array() })
+            }
+
+            try {
+                const user = await User.findById(req.user.id).select('-password');
+                const post = await Post.findById(req.params.id);
+
+                const newComment = {
+                    text: req.body.text,         
+                    name: user.name,
+                    avatar: user.avatar,
+                    user: req.user.id
+                }
+
+                post.comments.unshift(newComment);
+                await post.save();
+
+                res.json(post.comments);
+            } catch (err) {
+                console.error(err.message);
+                res.status(500).send('Server error');
+            }
+        });
+
+        /*
+        ---delete Comment---
+        DELETE api/posts/comment/:id/:comment_id
+        Private
+        */
+        router.delete('/comment/:id/:comment_id', auth, async (req,res)=>{
+
+            try {
+                const post = await Post.findById(req.params.id);
+
+                const comment = post.comments.find(comment => comment.id === req.params.comment_id);
+                if(!comment){
+                    return res.status(404).json({msg:'Comment does not exist'});
+                }
+                
+                if(comment.user.toString() !== req.user.id){
+                    return res.status(401).json({msg: 'User not authorised'});
+                }
+
+                const removeIndex = post.comments.map(comment => comment._id.toString()).indexOf(req.params.comment_id);
+
+                post.comments.splice(removeIndex,1);
+                await post.save();
+
+                res.json(post.comments);
+            } catch (err) {
+                console.error(err.message);
+                res.status(500).send('Server error');
+            }
+        });
+
+        module.exports = router;
+
+---------------------------------------------------------------------------------
+                                PART THREE - FRONTEND
+---------------------------------------------------------------------------------

@@ -90,3 +90,129 @@ Steps:
 ---------------------------------------------------------------------------------
                                 PART TWO
 ---------------------------------------------------------------------------------
+1-- UPDATE default.json
+
+2-- UPDATE user.js
+
+GOTO MONGO DB and DELETE users COLLECTION
+GOTO POSTMAN and SEND Register User again
+
+3-- MIDDLEWARE
+4-- UPDATE routes/api/auth.js
+    GOTO POSTMAN use token to pass authorization (i.e. x-auth-token)
+    save as 'get auth user' in 'Users & Auth' collection
+
+5-- UPDATE routes/api/auth.js
+    GOTO POSTMAN and POST json to login and receive token, save as 'Login User' in collection 'User & Auth'
+    {
+        "email": "xyz@abc.com",
+        "password":"*******"
+    }
+
+6-- models/Profile.js
+7-- routes/api/profile.js
+GOTO POSTMAN & POST profile json to http://localhost:5000/api/profile
+Save as Create and Update Profile in Profile collection
+
+8-- TO GET ALL PROFILES
+UPDATE routes/api/profile.js
+GOTO POSTMAN & GET profile json to http://localhost:5000/api/profile
+Save as ALL PROFILES in Profile collection
+
+GET PROFILE BY USER_ID
+GOTO POSTMAN & GET
+http://localhost:5000/api/profile/user/<user_id>
+
+9-- DELETE USER, PROFILE, POSTS
+GOTO POSTMAN DELETE http://localhost:5000/api/profile
+pass x-auth-token 
+
+Save as 'Delete user n profile' in profile collection
+
+10-- ADD EXPERIENCE TO PROFILE
+GOTO POSTMAN PUT http://ocalhost/api/profile/experience
+headers: content-type: json
+         x-auth-token
+body: raw json
+
+11-- DELETE EXPERIENCE FROM PROFILE
+GOTO POSTMAN DELETE http://ocalhost/api/profile/experience/exp_id
+headers: x-auth-token
+
+12a-- ADD EDUCATION TO PROFILE
+GOTO POSTMAN PUT http://ocalhost/api/profile/education
+headers: content-type: json
+         x-auth-token
+body: raw json
+
+12b-- DELETE EXPERIENCE FROM PROFILE
+GOTO POSTMAN DELETE http://ocalhost/api/profile/education/edu_id
+headers: x-auth-token
+
+13a-- GITHUB API
+https://www.github.com/settings/developers
+Register new o auth app
+home url & callback url 
+http://localhost:5000
+
+Copy Client ID & Secret to cofig/default.json
+
+{
+    "mongoURI": "mongodb+srv://sonia:sonia@devconnector.voiv1.mongodb.net/<dbname>?retryWrites=true&w=majority",
+    "jwtSecret": "mysecrettoken",
+    "githubClientId": "88f2fb9222321b92a0c5",
+    "githubSecret": "284329d5328abe8498b80bb838d8331c426b0b60"
+}
+
+13b -- UPDATE routes/api/profile.js
+GOTO POSTMAN GET http://localhost:5000/api/profile/github/SoniaStalance
+
+14-- Creating the Post model
+15-- Modify routes/api/posts.js
+        -create post, get post, del post
+        -like / unlike
+        -add / remove comments
+
+---------------------------------------------------------------------------------
+                                PART THREE - FRONTEND
+---------------------------------------------------------------------------------
+npx create-react-app client
+cd client
+npm start
+
+--Modify package.json
+
+"scripts": {
+    "start": "node server",
+    "server": "nodemon server",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\"\"npm run client\""
+  }
+
+--terminal:
+cd ..
+npm run dev
+
+cd client
+npm i axios react-router-dom redux react-redux redux-thunk redux-devtools-extension moment react-moment
+* axios to make http req
+*  redux-thunk to make async req in actions (middleware)
+* moment is a date and time library
+
+in client folder Delete
+-gitignore
+-readme.md
+
+in terminal cd DEVCONNECTOR/client
+rm -rf .git
+cd ..
+
+then goto client/package.json (to add proxy)
+"proxy": "http://localhost:5000"
+(put , and paste before the last curly bracket)
+
+goto client/src (delete)
+-serviceWorker.js
+-index.css
+-App.test.js
+-logo.svg

@@ -241,3 +241,72 @@ goto client/src (delete)
     register new user 
     check if user is added to mongodb
 
+---------------------------------------------------------------------------------
+                        PART THREE - FRONTEND (cont) REDUX
+---------------------------------------------------------------------------------
+create dir client/src/reducers
+create file client/src/reducers/index.js
+
+1-- create file client/src/store.js
+2-- Edit App.js
+    (i.e. to incl a provider that combines redux with react, when wrapped with provider then all components can access the state)
+
+3-- create reducers/alert.js
+4-- edit reducers/index.js
+ -- create dir src/actions
+5-- create file src/actions/types.js
+6-- create file src/actions/alert.js
+ -- installation for universal id
+    cd client
+    npm i uuid
+7- Edit Register.js
+8-- create client/src/components/layout/Alert.js
+    NOTE: this is the alert component
+9-- Edit App.js
+
+COMPONENT (calls)--> ACTION (dispatches {type, payload})--> REDUCER (returns state, payload)--,
+    |                                                                                         |
+    `-------------------<<<------------------------------<<<----------------------------------'
+
+EXAMPLE:
+~~~~~~~~~
+    <   component   >
+        Register.js
+props.setAlert('my-msg','danger')
+            |
+            |
+            v
+    <     actions    >
+          alert.js   
+        dispatch({
+        type: SET_ALERT,
+        payload: {my-msg, danger, id}})
+            |
+            |
+            v
+    <     reducers    >
+          alert.js
+        case SET_ALERT:
+        return [...state, payload];
+            |
+            |
+            v
+    <   component   >
+        Register.js
+
+---------------------------------------------------------------------------------
+                PART THREE - FRONTEND (cont) USER AUTHENTICATION
+---------------------------------------------------------------------------------
+video 1
+--1 create file reducers/auth.js
+--2 edit actions/types.js
+--3 create actions/auth.js
+--4 edit Register.js
+--5 edit reducers/index.js
+
+video 2
+--1 edit actions/types.js
+--2 edit actions/auth.js
+--3 create file src/utils/setAuthToken.js
+--4 edit reducers/auth.js
+--5 edit App.js

@@ -956,18 +956,19 @@ APPEND this code snippet to routes/api/profile.js
     })
 
 13-- GITHUB API
-//UPDATE routes/api/profile.js
 
-//INCLUDE
-const request = require('request');
-const config = require('config');
+    //UPDATE routes/api/profile.js
 
-//APPEND
-/*
-GET routes/api/profile/github/:username
-get users github repos
-Public
-*/
+    //INCLUDE
+    const request = require('request');
+    const config = require('config');
+
+    //APPEND
+    /*
+    GET routes/api/profile/github/:username
+    get users github repos
+    Public
+    */
 
 router.get('/github/:username', (req, res)=>{
     try {
@@ -1523,4 +1524,453 @@ Create models/Post.js
         )
     }
 
-    export default Register
+    export default Register;
+
+---------------------------------------------------------------------------------
+                        PART THREE - FRONTEND (cont) REDUX
+---------------------------------------------------------------------------------
+1-- create file client/src/store.js
+
+    import { createStore, applyMiddleware } from 'redux';
+    import { composeWithDevTools } from 'redux-devtools-extension';
+    import thunk from 'redux-thunk';
+    import rootReducer from './reducers';
+
+    const initialState = {};
+
+    const middleware = [ thunk ];
+
+    const store = createStore(rootReducer, initialState, composeWithDevTools(applyMiddleware(...middleware)));
+
+    export default store;
+
+2-- Edit App.js
+
+    import React, { Fragment } from 'react';
+    import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+    import Register from './components/auth/Register';
+    import Login from './components/auth/Login';
+    import Navbar from './components/layout/Navbar';
+    import Landing from './components/layout/Landing';
+    //Provider combines redux with react
+    import { Provider } from 'react-redux';
+    import store from './store';
+    import './App.css';
+
+    const App = () => 
+    <Provider store={ store }>
+        <Router>
+        <Fragment>
+        <Navbar />
+        <Route exact path='/' component={ Landing } />
+        <section className="container">
+            <Switch>
+            <Route exact path = '/register' component = { Register } />
+            <Route exact path = '/login' component = { Login } />
+            </Switch>
+        </section>
+        </Fragment>
+    </Router>
+    </Provider>
+    export default App;
+
+3-- reducers/alert.js
+
+    import { SET_ALERT, REMOVE_ALERT } from '../actions/types';
+
+    const initialState = [];
+
+    export default function(state = initialState, action){
+        const { type, payload } = action;
+        switch(type){
+            //return a state (note: state is immutable therfore we copy existing state and append to it) it is the array we se in redux dev tools
+            case SET_ALERT:
+                return [...state, payload];
+            case REMOVE_ALERT:
+                return state.filter(alert=>alert.id !== payload);
+            default:
+                return state;
+        }
+    }
+
+4-- edit reducers/index.js
+
+    import { combineReducers } from 'redux';
+    import alert from './alert';
+
+    export default combineReducers({
+        alert
+    });
+
+5-- create file src/actions/types.js
+    export const SET_ALERT = 'SET_ALERT';
+    export const REMOVE_ALERT = 'REMOVE_ALERT';
+
+6-- create file src/actions/alert.js
+
+    import { v4 as uuidv4 } from 'uuid';
+    import { SET_ALERT, REMOVE_ALERT } from './types';
+
+    export const setAlert = (msg, alertType, timeout) => dispatch => {
+        const id = uuidv4();
+        dispatch({
+            type: SET_ALERT,
+            payload: {msg, alertType, id}
+        });
+
+        setTimeout(()=> dispatch({type: REMOVE_ALERT, payload: id}), timeout)
+    }
+
+7-- edit Register.js
+
+    import React, { Fragment, useState } from 'react';
+    import { Link } from 'react-router-dom';
+    import { connect } from 'react-redux';
+    /*connect is used by the component that wants to interact with redux say calling actions or getting state */
+    import { setAlert } from '../../actions/alert';
+    //impt
+    import PropTypes from 'prop-types'
+
+    //const Register = (props) =>
+    const Register = ({ setAlert }) => {
+        const [ formData, setFormData ] = useState({
+            name: '',
+            email: '',
+            password: '',
+            password2: ''
+        });
+
+        const { name, email, password, password2 } = formData;
+
+        const onChange = e => setFormData({...formData, [e.target.name]: e.target.value });
+
+        const onSubmit = async e => {
+            e.preventDefault();
+            //can be written as props.setAlert('Passwords do not match', 'danger')
+            if(password !== password2)
+                setAlert('Passwords do not match', 'danger', 3000)
+            else
+            console.log('Success!')
+        }
+
+        return (
+            <Fragment>
+                <h1 className="large text-primary">Sign Up</h1>
+                <p className="lead"><i className="fas fa-user"></i> Create Your Account</p>
+
+                <form className="form" onSubmit={ e => onSubmit(e) }>
+                    <div className="form-group">
+                    <input 
+                        type="text" 
+                        placeholder="Name" 
+                        name="name" value={ name } 
+                        onChange={ e => onChange(e) } 
+                        required 
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value={ email } 
+                        onChange={ e => onChange(e) } 
+                        required
+                    />
+                    <small className="form-text"
+                        >This site uses Gravatar so if you want a profile image, use a
+                        Gravatar email</small
+                    >
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value={ password } 
+                        onChange={ e => onChange(e) }
+                        minLength="6"
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        name="password2"
+                        value={ password2 } 
+                        onChange={ e => onChange(e) }
+                        minLength="6"
+                    />
+                    </div>
+
+                    <input type="submit" className="btn btn-primary" value="Register" />
+                </form>
+                <p className="my-1">
+                    Already have an account? <Link to="/login">Sign In</Link>
+                </p>
+            </Fragment>
+        )
+    }
+
+    Register.propTypes = {
+        setAlert: PropTypes.func.isRequired
+        //ptrf
+    }
+
+    export default connect(null, { setAlert })(Register);
+    /*connect(state, {actions}) i.e passing state and object of alerts
+    You can now access prop.setAlert
+    */
+
+8-- create client/src/components/layout/Alert.js
+
+    //racfp
+    import React from 'react'
+    import PropTypes from 'prop-types'
+    import { connect } from 'react-redux';
+    const Alert = ({ alerts }) => alerts != null && alerts.length > 0 && alerts.map(alert => (
+        //jsx - Javascript XML used to write HTML in React
+        <div key={alert.id} className={`alert alert-${alert.alertType}`}>
+            { alert.msg }
+        </div>
+    ));
+
+    Alert.propTypes = {
+        //ptar
+        alerts: PropTypes.array.isRequired
+    }
+    //mapping a redux state to a prop
+    //here, the array of alerts
+    const mapStateToProps = state => ({
+        //refer root reducers i.e. index.js
+        alerts: state.alert
+    });
+
+    export default connect(mapStateToProps)(Alert);
+
+9-- Edit App.js
+
+    import React, { Fragment } from 'react';
+    import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+    import Register from './components/auth/Register';
+    import Login from './components/auth/Login';
+    import Navbar from './components/layout/Navbar';
+    import Landing from './components/layout/Landing';
+    import Alert from './components/layout/Alert';
+    //Provider combines redux with react
+    import { Provider } from 'react-redux';
+    import store from './store';
+    import './App.css';
+
+    const App = () => 
+    <Provider store={ store }>
+        <Router>
+        <Fragment>
+        <Navbar />
+        <Route exact path='/' component={ Landing } />
+        <section className="container">
+            <Alert/>
+            <Switch>
+            <Route exact path = '/register' component = { Register } />
+            <Route exact path = '/login' component = { Login } />
+            </Switch>
+        </section>
+        </Fragment>
+    </Router>
+    </Provider>
+    export default App;
+
+---------------------------------------------------------------------------------
+                PART THREE - FRONTEND (cont) USER AUTHENTICATION
+---------------------------------------------------------------------------------
+video 1
+--1 create file reducers/auth.js
+    import { REGISTER_SUCCESS, REGISTER_FAIL } from '../actions/types';
+
+    const initialState = {
+        token: localStorage.getItem('token'),
+        isAuthenticated: null,
+        loading: true,
+        user: null
+    }
+
+    export default function(state = initialState, action){
+        const {type, payload} = action;
+        
+        switch(type){
+            case REGISTER_SUCCESS:
+                localStorage.setItem('token', payload.token);
+                return {...state, ...payload, isAuthenticated: true, loading: false};
+            
+            case REGISTER_FAIL:
+                localStorage.removeItem('token');
+                return {...state, token: null, isAuthenticated: false, loading: false};
+
+            default:
+                return state;
+        }
+    }
+
+--2 edit actions/types.js
+
+    export const SET_ALERT = 'SET_ALERT';
+    export const REMOVE_ALERT = 'REMOVE_ALERT';
+    export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
+    export const REGISTER_FAIL = 'REGISTER_FAIL';
+
+--3 create actions/auth.js
+
+    import axios from 'axios';
+    import { setAlert } from './alert';
+    import {REGISTER_SUCCESS, REGISTER_FAIL} from './types';
+
+    //register user
+    export const register = ({ name, email, password }) => async dispatch => {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const body = JSON.stringify({ name, email, password });
+
+        try {
+            const res = await axios.post('/api/users', body, config);
+
+            dispatch({
+                type: REGISTER_SUCCESS,
+                payload: res.data
+                //res.data is the token
+            });
+        } catch (err) {
+            const errors = err.response.data.errors;
+            if(errors){
+                errors.forEach(error => dispatch(setAlert(error.msg, 'danger',3000)));
+            }
+            dispatch({
+                type: REGISTER_FAIL
+            });
+        }
+    }
+
+--4 edit Register.js
+
+    import React, { Fragment, useState } from 'react';
+    import { Link } from 'react-router-dom';
+    import { connect } from 'react-redux';
+    /*connect is used by the component that wants to interact with redux say calling actions or getting state */
+    import { register } from '../../actions/auth';
+    import { setAlert } from '../../actions/alert';
+    //impt
+    import PropTypes from 'prop-types'
+
+    //const Register = (props) =>
+    const Register = ({ setAlert, register }) => {
+        const [ formData, setFormData ] = useState({
+            name: '',
+            email: '',
+            password: '',
+            password2: ''
+        });
+
+        const { name, email, password, password2 } = formData;
+
+        const onChange = e => setFormData({...formData, [e.target.name]: e.target.value });
+
+        const onSubmit = async e => {
+            e.preventDefault();
+            //can be written as props.setAlert('Passwords do not match', 'danger')
+            if(password !== password2)
+                setAlert('Passwords do not match', 'danger', 3000)
+            else
+            register({name, email, password});
+        }
+
+        return (
+            <Fragment>
+                <h1 className="large text-primary">Sign Up</h1>
+                <p className="lead"><i className="fas fa-user"></i> Create Your Account</p>
+
+                <form className="form" onSubmit={ e => onSubmit(e) }>
+                    <div className="form-group">
+                    <input 
+                        type="text" 
+                        placeholder="Name" 
+                        name="name" value={ name } 
+                        onChange={ e => onChange(e) } 
+                        //required 
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value={ email } 
+                        onChange={ e => onChange(e) } 
+                        //required
+                    />
+                    <small className="form-text"
+                        >This site uses Gravatar so if you want a profile image, use a
+                        Gravatar email</small
+                    >
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value={ password } 
+                        onChange={ e => onChange(e) }
+                        //minLength="6"
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        name="password2"
+                        value={ password2 } 
+                        onChange={ e => onChange(e) }
+                        //minLength="6"
+                    />
+                    </div>
+
+                    <input type="submit" className="btn btn-primary" value="Register" />
+                </form>
+                <p className="my-1">
+                    Already have an account? <Link to="/login">Sign In</Link>
+                </p>
+            </Fragment>
+        )
+    }
+
+    Register.propTypes = {
+        setAlert: PropTypes.func.isRequired,
+        register: PropTypes.func.isRequired
+        //ptrf
+    }
+
+    export default connect(null, { setAlert, register })(Register);
+    /*connect(state, {actions}) i.e passing state and object of alerts
+    You can now access prop.setAlert
+    */
+
+--5 edit reducers/index.js
+
+    import { combineReducers } from 'redux';
+    import alert from './alert';
+    import auth from './auth';
+
+    export default combineReducers({
+        alert,
+        auth
+    });
+
+video 2

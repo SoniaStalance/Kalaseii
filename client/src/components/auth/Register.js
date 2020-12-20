@@ -1,5 +1,5 @@
 import React, { Fragment, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 /*connect is used by the component that wants to interact with redux say calling actions or getting state */
 import { register } from '../../actions/auth';
@@ -8,7 +8,7 @@ import { setAlert } from '../../actions/alert';
 import PropTypes from 'prop-types'
 
 //const Register = (props) =>
-const Register = ({ setAlert, register }) => {
+const Register = ({ setAlert, register, isAuthenticated }) => {
     const [ formData, setFormData ] = useState({
         name: '',
         email: '',
@@ -27,6 +27,10 @@ const Register = ({ setAlert, register }) => {
             setAlert('Passwords do not match', 'danger', 3000)
         else
            register({name, email, password});
+    }
+
+    if(isAuthenticated){
+        return <Redirect to ='/dashboard' />
     }
 
     return (
@@ -93,11 +97,17 @@ const Register = ({ setAlert, register }) => {
 
 Register.propTypes = {
     setAlert: PropTypes.func.isRequired,
-    register: PropTypes.func.isRequired
+    register: PropTypes.func.isRequired,
+    isAuthenticated: PropTypes.bool
     //ptrf
 }
 
-export default connect(null, { setAlert, register })(Register);
+const mapStateToProps = state => ({
+    isAuthenticated: state.auth.isAuthenticated
+});
+
+export default connect(mapStateToProps, { setAlert, register })(Register);
+
 /*connect(state, {actions}) i.e passing state and object of alerts
 You can now access prop.setAlert
 */

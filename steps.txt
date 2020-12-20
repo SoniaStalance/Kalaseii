@@ -1278,7 +1278,7 @@ Create models/Post.js
         module.exports = router;
 
 ---------------------------------------------------------------------------------
-                                PART THREE - FRONTEND
+                                PART THREE(a) - FRONTEND
 ---------------------------------------------------------------------------------
 3-- Edit App.js
 
@@ -1527,7 +1527,7 @@ Create models/Post.js
     export default Register;
 
 ---------------------------------------------------------------------------------
-                        PART THREE - FRONTEND (cont) REDUX
+                        PART THREE(b) - FRONTEND (cont) REDUX
 ---------------------------------------------------------------------------------
 1-- create file client/src/store.js
 
@@ -1784,7 +1784,7 @@ Create models/Post.js
     export default App;
 
 ---------------------------------------------------------------------------------
-                PART THREE - FRONTEND (cont) USER AUTHENTICATION
+                PART THREE(c) - FRONTEND (cont) USER AUTHENTICATION
 ---------------------------------------------------------------------------------
 video 1
 --1 create file reducers/auth.js
@@ -1973,4 +1973,572 @@ video 1
         auth
     });
 
-video 2
+video 2,3 login
+--1 edit actions/types.js
+    export const SET_ALERT = 'SET_ALERT';
+    export const REMOVE_ALERT = 'REMOVE_ALERT';
+    export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
+    export const REGISTER_FAIL = 'REGISTER_FAIL';
+    export const USER_LOADED = 'USER_LOADED';
+    export const AUTH_ERROR = 'AUTH_ERROR';
+    export const LOGIN_SUCCESS = 'LOGIN_SUCCESS';
+    export const LOGIN_FAIL = 'LOGIN_FAIL';
+
+--2 edit actions/auth.js
+    import axios from 'axios';
+    import { setAlert } from './alert';
+    import {REGISTER_SUCCESS, REGISTER_FAIL, USER_LOADED, AUTH_ERROR, LOGIN_SUCCESS, LOGIN_FAIL } from './types';
+    import setAuthToken from '../utils/setAuthToken';
+    //load user
+    export const loadUser = () => async dispatch => {
+        if(localStorage.token)
+            setAuthToken(localStorage.token)
+        
+        try {
+            const res = await axios.get('/api/auth');
+
+            dispatch({
+                type: USER_LOADED,
+                payload: res.data
+            });
+
+        } catch (err) {
+            dispatch({
+                type: AUTH_ERROR
+            })
+        }
+    }
+
+    //register user
+    export const register = ({ name, email, password }) => async dispatch => {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const body = JSON.stringify({ name, email, password });
+
+        try {
+            const res = await axios.post('/api/users', body, config);
+
+            dispatch({
+                type: REGISTER_SUCCESS,
+                payload: res.data
+                //res.data is the token
+            });
+            dispatch(loadUser());
+        } catch (err) {
+            const errors = err.response.data.errors;
+            if(errors){
+                errors.forEach(error => dispatch(setAlert(error.msg, 'danger',3000)));
+            }
+            dispatch({
+                type: REGISTER_FAIL
+            });
+        }
+    }
+
+    //Login User
+
+    export const login = ( email, password ) => async dispatch => {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const body = JSON.stringify({ email, password });
+
+        try {
+            const res = await axios.post('/api/auth', body, config);
+
+            dispatch({
+                type: LOGIN_SUCCESS,
+                payload: res.data
+                //res.data is the token
+            });
+            dispatch(loadUser());
+        } catch (err) {
+            const errors = err.response.data.errors;
+            if(errors){
+                errors.forEach(error => dispatch(setAlert(error.msg, 'danger',3000)));
+            }
+            dispatch({
+                type: LOGIN_FAIL
+            });
+        }
+    }
+
+--3 create file src/utils/setAuthToken.js
+    import axios from 'axios';
+
+    const setAuthToken = token => {
+        if(token)
+            axios.defaults.headers.common['x-auth-token'] = token
+        else
+            delete axios.defaults.headers.common['x-auth-token']
+    }
+
+    export default setAuthToken;
+
+--4 edit reducers/auth.js
+
+    import { REGISTER_SUCCESS, REGISTER_FAIL, USER_LOADED, AUTH_ERROR, LOGIN_SUCCESS, LOGIN_FAIL } from '../actions/types';
+
+    const initialState = {
+        token: localStorage.getItem('token'),
+        isAuthenticated: null,
+        loading: true,
+        user: null
+    }
+
+    export default function(state = initialState, action){
+        const {type, payload} = action;
+        
+        switch(type){
+            case USER_LOADED:
+                return{
+                    ...state,
+                    isAuthenticated: true,
+                    loading: false,
+                    user: payload
+                }
+
+            case REGISTER_SUCCESS:
+            case LOGIN_SUCCESS:
+                localStorage.setItem('token', payload.token);
+                return {...state, ...payload, isAuthenticated: true, loading: false};
+            
+            case REGISTER_FAIL:
+            case AUTH_ERROR:
+            case LOGIN_FAIL:
+                localStorage.removeItem('token');
+                return {...state, token: null, isAuthenticated: false, loading: false};
+
+            default:
+                return state;
+        }
+    }
+
+--5 edit App.js
+    import React, { Fragment, useEffect } from 'react';
+    import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+    import Register from './components/auth/Register';
+    import Login from './components/auth/Login';
+    import Navbar from './components/layout/Navbar';
+    import Landing from './components/layout/Landing';
+    import Alert from './components/layout/Alert';
+    //Provider combines redux with react
+    import { Provider } from 'react-redux';
+    import store from './store';
+    import './App.css';
+    import { loadUser } from './actions/auth';
+    import setAuthToken from './utils/setAuthToken';
+
+    //everytime the app loads
+    if(localStorage.token)
+            setAuthToken(localStorage.token)
+
+    const App = () => {
+    // similar to componentDidMount it will only update when [properties] update
+    useEffect(()=>{
+        store.dispatch(loadUser());
+    },[])
+
+    return(
+        <Provider store={ store }>
+        <Router>
+        <Fragment>
+            <Navbar />
+            <Route exact path='/' component={ Landing } />
+            <section className="container">
+            <Alert/>
+            <Switch>
+                <Route exact path = '/register' component = { Register } />
+                <Route exact path = '/login' component = { Login } />
+            </Switch>
+            </section>
+        </Fragment>
+        </Router>
+        </Provider>
+    );
+    }
+    export default App;
+
+--6 edit components/Login.js
+    import React, { Fragment, useState } from 'react';
+    import { Link, Redirect } from 'react-router-dom';
+    import { connect } from 'react-redux';
+    import PropTypes from 'prop-types';
+    import { login } from '../../actions/auth';
+
+    const Login = ({ login, isAuthenticated }) => {
+        const [ formData, setFormData ] = useState({
+            email: '',
+            password: ''
+        });
+
+        const { email, password } = formData;
+
+        const onChange = e => setFormData({...formData, [e.target.name]: e.target.value });
+
+        const onSubmit = async e => {
+            e.preventDefault();
+            login(email, password);
+        }
+
+        //redirect if logged in
+        if(isAuthenticated){
+            return <Redirect to ='/dashboard' />
+        }
+
+        return (
+            <Fragment>
+                <h1 className="large text-primary">Sign In</h1>
+                <p className="lead"><i className="fas fa-user"></i> Sign In</p>
+
+                <form className="form" onSubmit={ e => onSubmit(e) }>
+                    
+                    <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value={ email } 
+                        onChange={ e => onChange(e) } 
+                        required
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value={ password } 
+                        onChange={ e => onChange(e) }
+                        minLength="6"
+                    />
+                    </div>
+
+                    <input type="submit" className="btn btn-primary" value="Login" />
+                </form>
+                <p className="my-1">
+                    Don't have an account? <Link to="/register">Sign Up</Link>
+                </p>
+            </Fragment>
+        )
+    }
+
+    Login.propTypes = {
+        login: PropTypes.func.isRequired,
+        isAuthenticated: PropTypes.bool
+    }
+
+    const mapStateToProps = state => ({
+        isAuthenticated: state.auth.isAuthenticated
+    });
+
+    export default connect(mapStateToProps, { login })(Login);
+
+--7 edit Register.js
+    import React, { Fragment, useState } from 'react';
+    import { Link, Redirect } from 'react-router-dom';
+    import { connect } from 'react-redux';
+    /*connect is used by the component that wants to interact with redux say calling actions or getting state */
+    import { register } from '../../actions/auth';
+    import { setAlert } from '../../actions/alert';
+    //impt
+    import PropTypes from 'prop-types'
+
+    //const Register = (props) =>
+    const Register = ({ setAlert, register, isAuthenticated }) => {
+        const [ formData, setFormData ] = useState({
+            name: '',
+            email: '',
+            password: '',
+            password2: ''
+        });
+
+        const { name, email, password, password2 } = formData;
+
+        const onChange = e => setFormData({...formData, [e.target.name]: e.target.value });
+
+        const onSubmit = async e => {
+            e.preventDefault();
+            //can be written as props.setAlert('Passwords do not match', 'danger')
+            if(password !== password2)
+                setAlert('Passwords do not match', 'danger', 3000)
+            else
+            register({name, email, password});
+        }
+
+        if(isAuthenticated){
+            return <Redirect to ='/dashboard' />
+        }
+
+        return (
+            <Fragment>
+                <h1 className="large text-primary">Sign Up</h1>
+                <p className="lead"><i className="fas fa-user"></i> Create Your Account</p>
+
+                <form className="form" onSubmit={ e => onSubmit(e) }>
+                    <div className="form-group">
+                    <input 
+                        type="text" 
+                        placeholder="Name" 
+                        name="name" value={ name } 
+                        onChange={ e => onChange(e) } 
+                        //required 
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value={ email } 
+                        onChange={ e => onChange(e) } 
+                        //required
+                    />
+                    <small className="form-text"
+                        >This site uses Gravatar so if you want a profile image, use a
+                        Gravatar email</small
+                    >
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value={ password } 
+                        onChange={ e => onChange(e) }
+                        //minLength="6"
+                    />
+                    </div>
+
+                    <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        name="password2"
+                        value={ password2 } 
+                        onChange={ e => onChange(e) }
+                        //minLength="6"
+                    />
+                    </div>
+
+                    <input type="submit" className="btn btn-primary" value="Register" />
+                </form>
+                <p className="my-1">
+                    Already have an account? <Link to="/login">Sign In</Link>
+                </p>
+            </Fragment>
+        )
+    }
+
+    Register.propTypes = {
+        setAlert: PropTypes.func.isRequired,
+        register: PropTypes.func.isRequired,
+        isAuthenticated: PropTypes.bool
+        //ptrf
+    }
+
+    const mapStateToProps = state => ({
+        isAuthenticated: state.auth.isAuthenticated
+    });
+
+    export default connect(mapStateToProps, { setAlert, register })(Register);
+
+    /*connect(state, {actions}) i.e passing state and object of alerts
+    You can now access prop.setAlert
+    */
+
+video 4 logout
+--1 edit src/actions/types (append)
+    export const LOGOUT = 'LOGOUT';
+
+--2 edit actions/auth.js
+    import axios from 'axios';
+    import { setAlert } from './alert';
+    import {REGISTER_SUCCESS, REGISTER_FAIL, USER_LOADED, AUTH_ERROR, LOGIN_SUCCESS, LOGIN_FAIL, LOGOUT } from './types';
+    import setAuthToken from '../utils/setAuthToken';
+    //load user
+    export const loadUser = () => async dispatch => {
+        if(localStorage.token)
+            setAuthToken(localStorage.token)
+        
+        try {
+            const res = await axios.get('/api/auth');
+
+            dispatch({
+                type: USER_LOADED,
+                payload: res.data
+            });
+
+        } catch (err) {
+            dispatch({
+                type: AUTH_ERROR
+            })
+        }
+    }
+
+    //register user
+    export const register = ({ name, email, password }) => async dispatch => {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const body = JSON.stringify({ name, email, password });
+
+        try {
+            const res = await axios.post('/api/users', body, config);
+
+            dispatch({
+                type: REGISTER_SUCCESS,
+                payload: res.data
+                //res.data is the token
+            });
+            dispatch(loadUser());
+        } catch (err) {
+            const errors = err.response.data.errors;
+            if(errors){
+                errors.forEach(error => dispatch(setAlert(error.msg, 'danger',3000)));
+            }
+            dispatch({
+                type: REGISTER_FAIL
+            });
+        }
+    }
+
+    //Login User
+
+    export const login = ( email, password ) => async dispatch => {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const body = JSON.stringify({ email, password });
+
+        try {
+            const res = await axios.post('/api/auth', body, config);
+
+            dispatch({
+                type: LOGIN_SUCCESS,
+                payload: res.data
+                //res.data is the token
+            });
+            dispatch(loadUser());
+        } catch (err) {
+            const errors = err.response.data.errors;
+            if(errors){
+                errors.forEach(error => dispatch(setAlert(error.msg, 'danger',3000)));
+            }
+            dispatch({
+                type: LOGIN_FAIL
+            });
+        }
+    }
+
+    //logout
+    //clear profile
+    export const logout = () => dispatch => {
+        dispatch({type: LOGOUT})
+    }
+
+--3 edit reducers/auth.js
+    import { REGISTER_SUCCESS, REGISTER_FAIL, USER_LOADED, AUTH_ERROR, LOGIN_SUCCESS, LOGIN_FAIL, LOGOUT } from '../actions/types';
+
+    const initialState = {
+        token: localStorage.getItem('token'),
+        isAuthenticated: null,
+        loading: true,
+        user: null
+    }
+
+    export default function(state = initialState, action){
+        const {type, payload} = action;
+        
+        switch(type){
+            case USER_LOADED:
+                return{
+                    ...state,
+                    isAuthenticated: true,
+                    loading: false,
+                    user: payload
+                }
+
+            case REGISTER_SUCCESS:
+            case LOGIN_SUCCESS:
+                localStorage.setItem('token', payload.token);
+                return {...state, ...payload, isAuthenticated: true, loading: false};
+            
+            case REGISTER_FAIL:
+            case AUTH_ERROR:
+            case LOGIN_FAIL:
+            case LOGOUT:
+                localStorage.removeItem('token');
+                return {...state, token: null, isAuthenticated: false, loading: false};
+
+            default:
+                return state;
+        }
+    }
+
+--4 edit components/layout/Navbar.js
+    import React, { Fragment } from 'react';
+    import { Link } from 'react-router-dom';
+    import { connect } from 'react-redux';
+    import PropTypes from 'prop-types';
+    import { logout } from '../../actions/auth';
+
+    export const Navbar = ({ auth: { isAuthenticated, loading }, logout }) => {
+        const authLinks = (
+            <ul>
+                <li><a onClick={ logout } href="#!">
+                        <i className='fas fa-sign-out-alt'/>{' '}
+                        <span className='hide-sm'>Logout</span>
+                    </a>
+                </li>
+            </ul>
+        );
+
+        const guestLinks = (
+            <ul>
+                <li><Link to="/">Developers</Link></li>
+                <li><Link to="/register">Register</Link></li>
+                <li><Link to="/login">Login</Link></li>
+            </ul>    
+        );
+
+        return (
+            <nav className="navbar bg-dark">
+            <h1>
+                <Link to="/"><i className="fas fa-code"></i> DevConnector</Link>
+            </h1>
+            { !loading && (<Fragment>{ isAuthenticated ? authLinks: guestLinks }</Fragment>)}
+            </nav>
+        )
+    }
+
+    Navbar.propTypes = {
+        logout: PropTypes.func.isRequired,
+        auth: PropTypes.object.isRequired
+    }
+
+    const mapStateToProps = state => ({
+        auth: state.auth
+    })
+
+    export default connect(mapStateToProps, { logout })(Navbar);
+
+---------------------------------------------------------------------------------
+        PART THREE(d) - FRONTEND (cont) DASHBOARD & PROFILE MANAGEMENT
+---------------------------------------------------------------------------------

@@ -304,9 +304,19 @@ video 1
 --4 edit Register.js
 --5 edit reducers/index.js
 
-video 2
+video 2,3 login
 --1 edit actions/types.js
 --2 edit actions/auth.js
 --3 create file src/utils/setAuthToken.js
 --4 edit reducers/auth.js
 --5 edit App.js
+--6 edit components/Login.js
+--7 edit Register.js
+
+in localhost check if you're able to login and redirected to blank dashboard
+
+video 4 logout
+--1 edit src/actions/types (append)
+--2 edit actions/auth.js
+--3 edit reducers/auth.js
+--4 edit components/layout/Navbar.js

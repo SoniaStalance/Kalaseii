@@ -11,6 +11,12 @@ const ProfileSchema = new mongoose.Schema({
     website: {
         type: String
     },
+    email:{
+        type: String
+    },
+    phone:{
+        type: String
+    },
     location: {
         type: String
     },
@@ -23,9 +29,6 @@ const ProfileSchema = new mongoose.Schema({
         required: true
     },
     bio:{
-        type: String
-    },
-    githubusername:{
         type: String
     },
     experience: [
@@ -57,30 +60,26 @@ const ProfileSchema = new mongoose.Schema({
             }
         }
     ],
-    education: [
+    project: [
         {
-            school: {
+            url1: {
                 type: String,
                 required: true
             },
-            degree: {
+            url2: {
+                type: String
+            },
+            location: {
                 type: String,
                 required: true
             },
-            fieldofstudy: {
+            title: {
                 type: String,
                 required: true
             },
-            from: {
+            proj_date: {
                 type: Date,
                 required: true
-            },
-            to: {
-                type: Date
-            },
-            current: {
-                type: Boolean,
-                default: false
             },
             description: {
                 type: String

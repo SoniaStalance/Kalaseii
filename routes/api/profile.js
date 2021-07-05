@@ -47,10 +47,11 @@ router.post('/', [auth, [
     const {
         company,
         website,
+        email,
+        phone,
         location,
         bio,
         status,
-        githubusername,
         skills,
         facebook,
         youtube,
@@ -64,10 +65,11 @@ router.post('/', [auth, [
     profileFields.user = req.user.id;
     if (company) profileFields.company = company;
     if (website) profileFields.website = website;
+    if(email) profileFields.email = email;
+    if(phone) profileFields.phone=phone;
     if (location) profileFields.location = location;
     if (bio) profileFields.bio = bio;
     if (status) profileFields.status = status;
-    if (githubusername) profileFields.githubusername = githubusername;
 
     if(skills){
         profileFields.skills = skills.split(',').map(skill => skill.trim());
@@ -147,7 +149,6 @@ private
 
 router.delete('/', auth, async(req, res)=>{
     try{
-        //todo - remove user's posts
         //Remove Profile
         await Profile.findOneAndRemove({user: req.user.id});
         //Remove u=User
@@ -233,15 +234,15 @@ router.delete('/experience/:exp_id', auth, async (req, res)=>{
 })
 
 /*
-PUT api/profile/education
-add profile education
+PUT api/profile/project
+add profile project
 private
 */
-router.put('/education', [ auth, [
-    check('school','School is required').not().isEmpty(),
-    check('degree','Degree is required').not().isEmpty(),
-    check('fieldofstudy','Field of study is required').not().isEmpty(),
-    check('from','From is required').not().isEmpty()
+router.put('/project', [ auth, [
+    check('url1','URL is required').not().isEmpty(),
+    check('location','Location is required').not().isEmpty(),
+    check('title','Title is required').not().isEmpty(),
+    check('proj_date','Date is required').not().isEmpty()
 ] ], 
 async (req, res)=> {
     const errors = validationResult(req);
@@ -250,31 +251,33 @@ async (req, res)=> {
     }
 
     const{
-        school,
-        degree,
-        fieldofstudy,
-        from,
-        to,
-        current,
+        url1,
+        url2,
+        location,
+        title,
+        proj_date,
         description
     } = req.body;
 
-    const newEdu = {
-        school,
-        degree,
-        fieldofstudy,
-        from,
-        to,
-        current,
+    const newPro = {
+        url1,
+        location,
+        title,
+        proj_date,
         description
     }
+
+    if(url2) 
+        newPro.url2 = url2;
+    else
+        newPro.url2 = null;
 
     try{
         const profile = await Profile.findOne({user: req.user.id});
         //push will push at the end of the array
         //unshift will push to the beginning of the array
 
-        profile.education.unshift(newEdu);
+        profile.project.unshift(newPro);
         await profile.save();
 
         res.json(profile);
@@ -285,17 +288,17 @@ async (req, res)=> {
 });
 
 /*
-DELETE education by edu_id
+DELETE project by pro_id
 private
 */
-router.delete('/education/:edu_id', auth, async (req, res)=>{
+router.delete('/project/:pro_id', auth, async (req, res)=>{
     try {
         const profile = await Profile.findOne({user: req.user.id});
 
-        //get remove experience
-        const removeIndex = profile.education.map(item => item.id).indexOf(req.params.edu_id);
+        //get remove project
+        const removeIndex = profile.project.map(item => item.id).indexOf(req.params.pro_id);
 
-        profile.education.splice(removeIndex, 1);
+        profile.project.splice(removeIndex, 1);
         await profile.save();
 
         res.json(profile);
@@ -306,33 +309,5 @@ router.delete('/education/:edu_id', auth, async (req, res)=>{
     }
 })
 
-/*
-GET routes/api/profile/github/:username
-get users github repos
-Public
-*/
-
-router.get('/github/:username', (req, res)=>{
-    try {
-        
-        const options = {
-            uri : `https://api.github.com/users/${req.params.username}/repos?per_page=5&sort=created:asc&client_id=${config.get('githubClientId')}&client_secret=${config.get('githubSecret')}`,
-            method : 'GET',
-            headers: {'user-agent': 'node.js'}
-        }
-
-        request(options, (error, response, body) => {
-            if(error) console.error(error.message);
-    
-            if(response.statusCode !== 200) res.status(404).json({msg: 'No github profile for user'});
-    
-            res.json(JSON.parse(body));
-        })
-        
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server error');
-    }
-})
 
 module.exports = router;

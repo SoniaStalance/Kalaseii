@@ -1,5 +1,5 @@
 {
-  "name": "devconnector",
+  "name": "kalaseii",
   "version": "1.0.0",
   "homepage": "http://soniastalance.github.io/kalaseii",
   "description": "Social Network for Decorators",
@@ -9,9 +9,8 @@
     "server": "nodemon server",
     "client": "npm start --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "cd client && npm run build",
-    "install-client":"cd client && npm install",
-    "heroku-postbuild": "npm run install-client && npm run build"
+    "client:build": "cd client && npm run build",
+    "client:deploy": "cd client && gh-pages -d build"
   },
   "author": "Sonia Stalance",
   "license": "MIT",

@@ -1,0 +1,24 @@
+{
+  "files": {
+    "main.css": "/kalaseii/static/css/main.b8468ae1.chunk.css",
+    "main.js": "/kalaseii/static/js/main.1b41713a.chunk.js",
+    "main.js.map": "/kalaseii/static/js/main.1b41713a.chunk.js.map",
+    "runtime-main.js": "/kalaseii/static/js/runtime-main.1c08f69f.js",
+    "runtime-main.js.map": "/kalaseii/static/js/runtime-main.1c08f69f.js.map",
+    "static/js/2.ef16bbb8.chunk.js": "/kalaseii/static/js/2.ef16bbb8.chunk.js",
+    "static/js/2.ef16bbb8.chunk.js.map": "/kalaseii/static/js/2.ef16bbb8.chunk.js.map",
+    "static/js/3.f44d7365.chunk.js": "/kalaseii/static/js/3.f44d7365.chunk.js",
+    "static/js/3.f44d7365.chunk.js.map": "/kalaseii/static/js/3.f44d7365.chunk.js.map",
+    "index.html": "/kalaseii/index.html",
+    "static/css/main.b8468ae1.chunk.css.map": "/kalaseii/static/css/main.b8468ae1.chunk.css.map",
+    "static/js/2.ef16bbb8.chunk.js.LICENSE.txt": "/kalaseii/static/js/2.ef16bbb8.chunk.js.LICENSE.txt",
+    "static/media/App.css": "/kalaseii/static/media/showcase.b956e50d.JPG",
+    "static/media/spinner.dbb22bcf.gif": "/kalaseii/static/media/spinner.dbb22bcf.gif"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.1c08f69f.js",
+    "static/js/2.ef16bbb8.chunk.js",
+    "static/css/main.b8468ae1.chunk.css",
+    "static/js/main.1b41713a.chunk.js"
+  ]
+}
